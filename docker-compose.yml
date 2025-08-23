@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mood-diary-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/mood_diary.db
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - mood-diary-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mood-diary-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - mood-diary-network
+
+  bot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.bot
+    container_name: mood-diary-bot
+    environment:
+      - DATABASE_URL=sqlite:///./data/mood_diary.db
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - mood-diary-network
+
+  db:
+    image: alpine:latest
+    container_name: mood-diary-db
+    volumes:
+      - ./data:/data
+    command: ["sh", "-c", "mkdir -p /data && touch /data/mood_diary.db && tail -f /dev/null"]
+    networks:
+      - mood-diary-network
+
+volumes:
+  mood_diary_data:
+
+networks:
+  mood-diary-network:
+    driver: bridge
