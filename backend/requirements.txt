@@ -1,0 +1,53 @@
+# FastAPI и зависимости
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# База данных
+sqlalchemy==2.0.23
+alembic==1.13.1
+
+# Телеграм бот
+python-telegram-bot==20.7
+aiofiles==23.2.1
+
+# Google Gemini AI
+google-generativeai==0.3.2
+
+# HTTP клиент
+httpx==0.25.2
+requests==2.31.0
+
+# Утилиты для работы с данными
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# CORS уже включен в FastAPI
+
+# Переменные окружения
+python-dotenv==1.0.0
+
+# Дата и время
+python-dateutil==2.8.2
+
+# Логирование
+loguru==0.7.2
+
+# Валидация и парсинг
+email-validator==2.1.0
+
+# Тестирование
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Качество кода
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Безопасность
+cryptography>=41.0.0
