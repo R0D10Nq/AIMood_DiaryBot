@@ -472,17 +472,39 @@ class MoodDiaryBot:
         try:
             await self.application.initialize()
             await self.application.start()
-            await self.application.updater.start_polling()
+            await self.application.updater.start_polling(
+                drop_pending_updates=True,
+                allowed_updates=Update.ALL_TYPES
+            )
             
             logger.info("✅ Telegram Bot запущен и готов к работе!")
             
             # Держим бота работающим
-            await asyncio.Event().wait()
+            import signal
+            stop_event = asyncio.Event()
+            
+            def signal_handler():
+                logger.info("🛑 Получен сигнал остановки")
+                stop_event.set()
+            
+            # Регистрируем обработчик сигналов
+            for sig in [signal.SIGINT, signal.SIGTERM]:
+                signal.signal(sig, lambda s, f: signal_handler())
+            
+            await stop_event.wait()
             
         except Exception as e:
             logger.error(f"❌ Ошибка запуска бота: {e}")
+            import traceback
+            logger.error(f"Полная трассировка: {traceback.format_exc()}")
+            raise
         finally:
-            await self.application.stop()
+            logger.info("🔄 Останавливаю бота...")
+            try:
+                await self.application.stop()
+                await self.application.shutdown()
+            except Exception as e:
+                logger.error(f"Ошибка при остановке: {e}")
 
 
 # Создаем экземпляр бота

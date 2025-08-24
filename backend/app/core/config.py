@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-super-secret-key-change-this-in-production"
     
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
     
     # Telegram Bot
     TELEGRAM_BOT_TOKEN: str = ""
@@ -50,13 +50,16 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "allow"
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
         # Преобразование CORS_ORIGINS из строки в список
         if isinstance(self.CORS_ORIGINS, str):
-            self.CORS_ORIGINS = [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+            self.cors_origins_list = [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        else:
+            self.cors_origins_list = self.CORS_ORIGINS
     
     @property
     def is_development(self) -> bool:

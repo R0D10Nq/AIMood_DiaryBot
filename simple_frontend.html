@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mood Diary Bot - Дневник Настроения</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #333;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .mood-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .mood-btn {
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            background: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            font-size: 18px;
+        }
+        
+        .mood-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+        }
+        
+        .mood-btn.selected {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .entries-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .entry-card {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .entry-date {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .entry-mood {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .entry-note {
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            opacity: 0.9;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI Mood Diary Bot</h1>
+            <p>Умный дневник настроения с ИИ анализом</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('add-mood')">➕ Добавить настроение</button>
+            <button class="tab" onclick="showTab('view-entries')">📝 Мои записи</button>
+            <button class="tab" onclick="showTab('analytics')">📊 Аналитика</button>
+            <button class="tab" onclick="showTab('users')">👥 Пользователи</button>
+        </div>
+        
+        <!-- Add Mood Tab -->
+        <div id="add-mood" class="tab-content active">
+            <h2>Как ваше настроение сегодня?</h2>
+            
+            <div class="form-group">
+                <label>Выберите пользователя:</label>
+                <select id="userSelect">
+                    <option value="">Выберите пользователя или создайте нового</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Или создайте нового пользователя:</label>
+                <input type="text" id="newUserName" placeholder="Имя пользователя">
+                <input type="text" id="telegramId" placeholder="Telegram ID (опционально)">
+                <button class="btn" onclick="createUser()">Создать пользователя</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Выберите настроение:</label>
+                <div class="mood-grid">
+                    <div class="mood-btn" data-mood="1" onclick="selectMood(1)">😢<br>Очень плохо</div>
+                    <div class="mood-btn" data-mood="2" onclick="selectMood(2)">😞<br>Плохо</div>
+                    <div class="mood-btn" data-mood="3" onclick="selectMood(3)">😐<br>Нормально</div>
+                    <div class="mood-btn" data-mood="4" onclick="selectMood(4)">😊<br>Хорошо</div>
+                    <div class="mood-btn" data-mood="5" onclick="selectMood(5)">😄<br>Отлично</div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Заметки (опционально):</label>
+                <textarea id="moodNote" rows="4" placeholder="Расскажите о своем дне, чувствах, событиях..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Активности (через запятую):</label>
+                <input type="text" id="activities" placeholder="работа, спорт, встречи с друзьями...">
+            </div>
+            
+            <button class="btn" onclick="addMoodEntry()">Сохранить запись</button>
+            <div id="addMoodResult"></div>
+        </div>
+        
+        <!-- View Entries Tab -->
+        <div id="view-entries" class="tab-content">
+            <h2>Ваши записи настроения</h2>
+            <div class="form-group">
+                <label>Выберите пользователя:</label>
+                <select id="entriesUserSelect">
+                    <option value="">Выберите пользователя</option>
+                </select>
+                <button class="btn" onclick="loadUserEntries()">Загрузить записи</button>
+            </div>
+            <div id="entriesList" class="entries-list"></div>
+        </div>
+        
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content">
+            <h2>Аналитика настроения</h2>
+            <div class="form-group">
+                <label>Выберите пользователя:</label>
+                <select id="analyticsUserSelect">
+                    <option value="">Выберите пользователя</option>
+                </select>
+                <button class="btn" onclick="loadAnalytics()">Показать аналитику</button>
+            </div>
+            
+            <div id="analyticsContent">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalEntries">0</div>
+                        <div class="stat-label">Всего записей</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgMood">0</div>
+                        <div class="stat-label">Средний рейтинг</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="bestDay">-</div>
+                        <div class="stat-label">Лучший день</div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Динамика настроения</h3>
+                    <canvas id="moodChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Users Tab -->
+        <div id="users" class="tab-content">
+            <h2>Управление пользователями</h2>
+            <button class="btn" onclick="loadUsers()">Обновить список</button>
+            <div id="usersList"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let selectedMood = null;
+        let currentChart = null;
+
+        // Tab switching
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabId === 'users') {
+                loadUsers();
+            }
+            loadUserSelects();
+        }
+
+        // Mood selection
+        function selectMood(mood) {
+            document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('selected'));
+            document.querySelector(`[data-mood="${mood}"]`).classList.add('selected');
+            selectedMood = mood;
+        }
+
+        // API calls
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const config = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (data) {
+                    config.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, config);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'API Error');
+                }
+                
+                return result;
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        // User management
+        async function createUser() {
+            const name = document.getElementById('newUserName').value;
+            const telegramId = document.getElementById('telegramId').value;
+            
+            if (!name) {
+                showMessage('addMoodResult', 'Введите имя пользователя', 'error');
+                return;
+            }
+            
+            try {
+                const userData = { name };
+                if (telegramId) {
+                    userData.telegram_id = parseInt(telegramId);
+                }
+                
+                const user = await apiCall('/users/', 'POST', userData);
+                showMessage('addMoodResult', `Пользователь "${user.name}" создан!`, 'success');
+                
+                document.getElementById('newUserName').value = '';
+                document.getElementById('telegramId').value = '';
+                
+                loadUserSelects();
+            } catch (error) {
+                showMessage('addMoodResult', `Ошибка: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const users = await apiCall('/users/');
+                
+                let html = '<h3>Список пользователей:</h3>';
+                if (users.length === 0) {
+                    html += '<p>Пользователи не найдены. Создайте первого пользователя.</p>';
+                } else {
+                    users.forEach(user => {
+                        html += `
+                            <div class="entry-card">
+                                <strong>${user.name}</strong><br>
+                                ID: ${user.id}<br>
+                                ${user.telegram_id ? `Telegram: ${user.telegram_id}<br>` : ''}
+                                Создан: ${new Date(user.created_at).toLocaleString('ru')}
+                            </div>
+                        `;
+                    });
+                }
+                
+                document.getElementById('usersList').innerHTML = html;
+            } catch (error) {
+                document.getElementById('usersList').innerHTML = `<div class="error">Ошибка загрузки: ${error.message}</div>`;
+            }
+        }
+
+        async function loadUserSelects() {
+            try {
+                const users = await apiCall('/users/');
+                
+                const selects = ['userSelect', 'entriesUserSelect', 'analyticsUserSelect'];
+                selects.forEach(selectId => {
+                    const select = document.getElementById(selectId);
+                    const currentValue = select.value;
+                    
+                    select.innerHTML = '<option value="">Выберите пользователя</option>';
+                    users.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = user.name;
+                        if (user.id.toString() === currentValue) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Mood entries
+        async function addMoodEntry() {
+            const userId = document.getElementById('userSelect').value;
+            const note = document.getElementById('moodNote').value;
+            const activities = document.getElementById('activities').value;
+            
+            if (!userId) {
+                showMessage('addMoodResult', 'Выберите пользователя', 'error');
+                return;
+            }
+            
+            if (!selectedMood) {
+                showMessage('addMoodResult', 'Выберите настроение', 'error');
+                return;
+            }
+            
+            try {
+                const entryData = {
+                    user_id: parseInt(userId),
+                    mood_score: selectedMood,
+                    note: note || null,
+                    activities: activities ? activities.split(',').map(a => a.trim()) : []
+                };
+                
+                const entry = await apiCall('/mood-entries/', 'POST', entryData);
+                showMessage('addMoodResult', 'Запись сохранена! ИИ анализ добавлен.', 'success');
+                
+                // Reset form
+                document.getElementById('moodNote').value = '';
+                document.getElementById('activities').value = '';
+                selectedMood = null;
+                document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('selected'));
+                
+            } catch (error) {
+                showMessage('addMoodResult', `Ошибка: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadUserEntries() {
+            const userId = document.getElementById('entriesUserSelect').value;
+            
+            if (!userId) {
+                showMessage('entriesList', 'Выберите пользователя', 'error');
+                return;
+            }
+            
+            try {
+                document.getElementById('entriesList').innerHTML = '<div class="loading">Загрузка записей...</div>';
+                
+                const entries = await apiCall(`/mood-entries/user/${userId}`);
+                
+                if (entries.length === 0) {
+                    document.getElementById('entriesList').innerHTML = '<p>Записей не найдено.</p>';
+                    return;
+                }
+                
+                let html = '';
+                entries.reverse().forEach(entry => {
+                    const moodEmojis = ['', '😢', '😞', '😐', '😊', '😄'];
+                    const moodLabels = ['', 'Очень плохо', 'Плохо', 'Нормально', 'Хорошо', 'Отлично'];
+                    
+                    html += `
+                        <div class="entry-card">
+                            <div class="entry-date">${new Date(entry.created_at).toLocaleString('ru')}</div>
+                            <div class="entry-mood">${moodEmojis[entry.mood_score]} ${moodLabels[entry.mood_score]} (${entry.mood_score}/5)</div>
+                            ${entry.note ? `<div class="entry-note">${entry.note}</div>` : ''}
+                            ${entry.activities && entry.activities.length > 0 ? `<div><strong>Активности:</strong> ${entry.activities.join(', ')}</div>` : ''}
+                            ${entry.ai_analysis ? `<div style="margin-top: 10px; padding: 10px; background: #e8f4f8; border-radius: 8px;"><strong>🤖 ИИ Анализ:</strong><br>Эмоция: ${entry.ai_analysis.emotion}<br>Уверенность: ${(entry.ai_analysis.confidence * 100).toFixed(1)}%</div>` : ''}
+                        </div>
+                    `;
+                });
+                
+                document.getElementById('entriesList').innerHTML = html;
+                
+            } catch (error) {
+                document.getElementById('entriesList').innerHTML = `<div class="error">Ошибка загрузки: ${error.message}</div>`;
+            }
+        }
+
+        async function loadAnalytics() {
+            const userId = document.getElementById('analyticsUserSelect').value;
+            
+            if (!userId) {
+                return;
+            }
+            
+            try {
+                const entries = await apiCall(`/mood-entries/user/${userId}`);
+                const stats = await apiCall(`/analytics/user/${userId}/stats`);
+                
+                // Update stats
+                document.getElementById('totalEntries').textContent = stats.total_entries;
+                document.getElementById('avgMood').textContent = stats.average_mood.toFixed(1);
+                document.getElementById('bestDay').textContent = stats.best_day ? new Date(stats.best_day).toLocaleDateString('ru') : '-';
+                
+                // Create chart
+                if (currentChart) {
+                    currentChart.destroy();
+                }
+                
+                const ctx = document.getElementById('moodChart').getContext('2d');
+                const sortedEntries = entries.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                
+                currentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedEntries.map(entry => new Date(entry.created_at).toLocaleDateString('ru')),
+                        datasets: [{
+                            label: 'Настроение',
+                            data: sortedEntries.map(entry => entry.mood_score),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 2,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 5,
+                                min: 1
+                            }
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Analytics error:', error);
+            }
+        }
+
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+            setTimeout(() => {
+                element.innerHTML = '';
+            }, 5000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserSelects();
+        });
+    </script>
+</body>
+</html>
