@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # PostgreSQL for testing
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: mood_diary_db_test
+    environment:
+      - POSTGRES_DB=test_mood_diary
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - test_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_mood_diary"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for testing
+  redis-test:
+    image: redis:7-alpine
+    container_name: mood_diary_redis_test
+    command: redis-server --requirepass test_password
+    ports:
+      - "6380:6379"
+    networks:
+      - test_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Backend for testing
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mood_diary_backend_test
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres-test:5432/test_mood_diary
+      - REDIS_URL=redis://:test_password@redis-test:6379/0
+      - TELEGRAM_BOT_TOKEN=test_token_123456789
+      - GEMINI_API_KEY=test_gemini_key
+      - SECRET_KEY=test-secret-key-for-testing
+      - ENVIRONMENT=test
+      - CORS_ORIGINS=http://localhost:3000,http://frontend-test
+    ports:
+      - "8001:8000"
+    networks:
+      - test_network
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./backend/tests:/app/tests
+
+  # Frontend for testing
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mood_diary_frontend_test
+    environment:
+      - VITE_API_URL=http://backend-test:8000/api
+      - VITE_APP_NAME=AI Mood Diary Test
+    ports:
+      - "3001:80"
+    networks:
+      - test_network
+    depends_on:
+      backend-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_test_data:
+    driver: local
+
+networks:
+  test_network:
+    driver: bridge

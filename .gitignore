@@ -317,6 +317,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+.history/
 
 # Temporary files
 temp/

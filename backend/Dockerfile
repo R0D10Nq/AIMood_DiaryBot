@@ -1,23 +1,41 @@
-# Используем официальный Python образ
+# Backend Dockerfile
 FROM python:3.11-slim
 
-# Устанавливаем рабочую директорию
+# Set working directory
 WORKDIR /app
 
-# Копируем файл зависимостей
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        postgresql-client \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
 COPY requirements.txt .
 
-# Устанавливаем зависимости
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем код приложения
+# Copy application code
 COPY . .
 
-# Создаем директорию для данных
-RUN mkdir -p /app/data
+# Create necessary directories
+RUN mkdir -p /app/logs \
+    && mkdir -p /app/data
 
-# Открываем порт
+# Expose port
 EXPOSE 8000
 
-# Команда запуска
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

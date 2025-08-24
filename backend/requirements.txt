@@ -51,3 +51,6 @@ mypy==1.7.1
 
 # Безопасность
 cryptography>=41.0.0
+
+# Production server
+gunicorn==21.2.0
