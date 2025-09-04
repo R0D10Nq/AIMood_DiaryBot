@@ -138,6 +138,12 @@ graph TB
 6. **Gemini AI** - сервис анализа эмоций
 7. **Nginx** - reverse proxy и статические файлы
 
+**AI/ML компоненты:**
+- **Google Gemini API integration** для анализа настроения
+- **Full-stack approach**: Telegram bot + web dashboard
+- **Data analytics pipeline** для mood tracking
+- **FastAPI backend** с аналитическими отчетами
+
 ## 🚀 Быстрый старт
 
 ### Требования
